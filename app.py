@@ -188,13 +188,15 @@ if not st.session_state.vocab:
 
 mode = st.radio("어떤 퀴즈를 할까요?", ["뜻 → 단어", "단어 → 뜻"], horizontal=True)
 word_options = list(range(len(st.session_state.vocab)))
-selected_indices = st.multiselect(
-    "퀴즈에 넣을 단어를 선택하세요",
-    options=word_options,
-    default=word_options,
-    format_func=lambda i: f"{i + 1}. {st.session_state.vocab[i]['word']} — {st.session_state.vocab[i]['meaning']}",
-    key="quiz-selected-indices",
-)
+with st.expander("퀴즈에 사용할 단어 선택", expanded=False):
+    selected_indices = st.multiselect(
+        "단어를 고르세요",
+        options=word_options,
+        default=word_options,
+        format_func=lambda i: f"{i + 1}. {st.session_state.vocab[i]['word']} — {st.session_state.vocab[i]['meaning']}",
+        key="quiz-selected-indices",
+    )
+st.caption(f"현재 {len(selected_indices)}개 단어 선택됨")
 selected_vocab = [st.session_state.vocab[i] for i in selected_indices]
 if not selected_vocab:
     st.info("퀴즈를 시작하려면 단어를 하나 이상 선택해 주세요.")
