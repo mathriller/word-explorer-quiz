@@ -161,10 +161,14 @@ with st.sidebar:
     st.markdown("## 🧺 단어 바구니")
     st.caption("사진을 올려 단어를 가져오거나, 표에서 직접 고쳐 보세요.")
     uploaded = st.file_uploader("단어표 사진", type=["png", "jpg", "jpeg", "webp"], help="사진 속 단어표의 인쇄된 영어 단어와 뜻을 읽어요.")
-    if uploaded and st.button("✨ 사진에서 단어 읽기", use_container_width=True):
+    st.caption("iPad에서 파일 선택 후 카메라 화면이 검게 보이면 앱 카메라를 사용해 보세요.")
+    use_camera = st.checkbox("📷 앱에서 카메라로 촬영")
+    camera_photo = st.camera_input("단어표 사진 촬영", key="camera-photo") if use_camera else None
+    if (uploaded or camera_photo) and st.button("✨ 사진에서 단어 읽기", use_container_width=True):
         try:
             with st.spinner("사진 속 표를 읽고 있어요…"):
-                extracted = extract_vocab(uploaded.getvalue(), uploaded.type or "image/jpeg")
+                photo = camera_photo or uploaded
+                extracted = extract_vocab(photo.getvalue(), photo.type or "image/jpeg")
             if extracted:
                 st.session_state.vocab = extracted
                 st.session_state.pop("vocab_editor", None)
