@@ -207,6 +207,7 @@ st.write("")
 if not quiz["checked"]:
     with st.form(f"answer-form-{quiz['index']}"):
         answer = st.text_input("내 답", placeholder="여기에 답을 써 보세요", label_visibility="collapsed")
+        st.caption("📱 iPad에서는 답 칸을 누르고 Apple Pencil로 써 보세요. Scribble이 손글씨를 글자로 바꿔 줘요.")
         submitted = st.form_submit_button("정답 확인", type="primary", use_container_width=True)
     audio = None
     if voice_enabled:
