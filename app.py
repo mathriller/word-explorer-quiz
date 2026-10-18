@@ -165,6 +165,7 @@ with st.sidebar:
             if extracted:
                 st.session_state.vocab = extracted
                 st.session_state.pop("vocab_editor", None)
+                st.session_state.pop("quiz-selected-indices", None)
                 st.session_state.quiz = None
                 st.success(f"{len(extracted)}개 단어를 가져왔어요. 표를 확인해 주세요!")
             else:
@@ -199,8 +200,7 @@ if not selected_vocab:
     st.info("퀴즈를 시작하려면 단어를 하나 이상 선택해 주세요.")
     st.stop()
 voice_enabled = bool(get_api_key())
-if not voice_enabled:
-    st.caption("🎙️ 음성 입력은 OPENAI_API_KEY, 📷 사진 읽기는 GEMINI_API_KEY를 등록하면 사용할 수 있어요.")
+st.caption("📷 사진 단어 읽기는 Streamlit Secrets의 GEMINI_API_KEY, 🎙️ 음성 입력은 OPENAI_API_KEY를 등록하면 사용할 수 있어요.")
 
 if (st.session_state.quiz is None or st.session_state.quiz["mode"] != mode
         or st.session_state.quiz.get("selected_indices") != selected_indices):
