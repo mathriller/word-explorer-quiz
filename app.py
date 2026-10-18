@@ -160,15 +160,25 @@ if "quiz" not in st.session_state:
 with st.sidebar:
     st.markdown("## 🧺 단어 바구니")
     st.caption("사진을 올려 단어를 가져오거나, 표에서 직접 고쳐 보세요.")
-    uploaded = st.file_uploader("단어표 사진", type=["png", "jpg", "jpeg", "webp"], help="사진 속 단어표의 인쇄된 영어 단어와 뜻을 읽어요.")
+    uploaded = st.file_uploader("단어표 사진", type=["png", "jpg", "jpeg", "webp"], accept_multiple_files=True, help="여러 장을 한 번에 선택할 수 있어요. 사진 속 인쇄된 영어 단어와 뜻을 읽어요.")
     st.caption("iPad에서 파일 선택 후 카메라 화면이 검게 보이면 앱 카메라를 사용해 보세요.")
     use_camera = st.checkbox("📷 앱에서 카메라로 촬영")
     camera_photo = st.camera_input("단어표 사진 촬영", key="camera-photo") if use_camera else None
-    if (uploaded or camera_photo) and st.button("✨ 사진에서 단어 읽기", use_container_width=True):
+    photos = list(uploaded or [])
+    if camera_photo:
+        photos.append(camera_photo)
+    if photos and st.button("✨ 사진에서 단어 읽기", use_container_width=True):
         try:
-            with st.spinner("사진 속 표를 읽고 있어요…"):
-                photo = camera_photo or uploaded
-                extracted = extract_vocab(photo.getvalue(), photo.type or "image/jpeg")
+            extracted = []
+            seen_rows = set()
+            with st.spinner(f"사진 {len(photos)}장을 차례로 읽고 있어요…"):
+                for photo in photos:
+                    rows = extract_vocab(photo.getvalue(), photo.type or "image/jpeg")
+                    for row in rows:
+                        signature = (row["word"].casefold(), row["meaning"].casefold())
+                        if signature not in seen_rows:
+                            seen_rows.add(signature)
+                            extracted.append(row)
             if extracted:
                 st.session_state.vocab = extracted
                 st.session_state.pop("vocab_editor", None)
@@ -176,9 +186,9 @@ with st.sidebar:
                 for key in [key for key in st.session_state if key.startswith("quiz-word-")]:
                     del st.session_state[key]
                 st.session_state.quiz = None
-                st.success(f"{len(extracted)}개 단어를 가져왔어요. 표를 확인해 주세요!")
+                st.success(f"{len(photos)}장 사진에서 중복을 합쳐 {len(extracted)}개 단어를 가져왔어요. 표를 확인해 주세요!")
             else:
-                st.warning("읽을 수 있는 단어가 없어요. 사진을 다시 찍거나 표에 직접 입력해 주세요.")
+                st.warning("사진에서 읽을 수 있는 단어가 없어요. 사진을 다시 찍거나 표에 직접 입력해 주세요.")
         except Exception as exc:
             st.error(str(exc))
     st.markdown("#### 단어와 뜻 확인하기")
