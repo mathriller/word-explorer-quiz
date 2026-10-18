@@ -10,6 +10,8 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 from openai import OpenAI
+from google import genai
+from google.genai import types
 from streamlit.components.v1 import declare_component
 
 st.set_page_config(page_title="단어 탐험대", page_icon="🔎", layout="centered")
@@ -68,6 +70,13 @@ def get_api_key():
         return os.getenv("OPENAI_API_KEY", "")
 
 
+def get_gemini_api_key():
+    try:
+        return st.secrets.get("GEMINI_API_KEY", "") or os.getenv("GEMINI_API_KEY", "")
+    except Exception:
+        return os.getenv("GEMINI_API_KEY", "")
+
+
 def get_client():
     key = get_api_key()
     return OpenAI(api_key=key) if key else None
@@ -84,27 +93,25 @@ def clean_word_rows(rows):
 
 
 def extract_vocab(image_bytes, mime_type):
-    client = get_client()
-    if not client:
-        raise RuntimeError("사진에서 단어를 읽으려면 OpenAI API 키가 필요해요. 표에 직접 입력할 수도 있어요.")
-    encoded = base64.b64encode(image_bytes).decode("ascii")
+    key = get_gemini_api_key()
+    if not key:
+        raise RuntimeError("사진에서 단어를 읽으려면 Streamlit Secrets에 GEMINI_API_KEY를 등록해 주세요. 표에 직접 입력할 수도 있어요.")
+    client = genai.Client(api_key=key)
     prompt = (
         "Read the printed vocabulary table in this worksheet photo. Return only a JSON array of objects "
         'with exactly these keys: "word" and "meaning". Keep English words and Korean printed meanings. '
         "Ignore handwriting, names, dates, page instructions, and row numbers. Do not guess unreadable text. "
         "Include a row only when both fields can be read."
     )
-    result = client.responses.create(
-        model="gpt-4.1-mini",
-        input=[{"role": "user", "content": [
-            {"type": "input_text", "text": prompt},
-            {"type": "input_image", "image_url": f"data:{mime_type};base64,{encoded}"},
-        ]}],
+    result = client.models.generate_content(
+        model="gemini-3.8-flash",
+        contents=[
+            prompt,
+            types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
+        ],
+        config=types.GenerateContentConfig(response_mime_type="application/json"),
     )
-    fence = chr(96) * 3
-    raw = result.output_text.strip().replace(fence + "json", "").replace(fence, "").strip()
-    return clean_word_rows(json.loads(raw))
-
+    return clean_word_rows(json.loads(result.text))
 
 def transcribe(audio_bytes, mode):
     client = get_client()
@@ -119,11 +126,12 @@ def transcribe(audio_bytes, mode):
     return result.text.strip()
 
 
-def make_quiz(mode, size, count):
+def make_quiz(mode, selected_words, selected_indices, count):
     return {
         "mode": mode,
-        "size": size,
-        "deck": random.sample(st.session_state.vocab, k=count),
+        "size": len(selected_words),
+        "selected_indices": list(selected_indices),
+        "deck": random.sample(selected_words, k=count),
         "index": 0,
         "score": 0,
         "checked": False,
@@ -178,17 +186,29 @@ if not st.session_state.vocab:
     st.stop()
 
 mode = st.radio("어떤 퀴즈를 할까요?", ["뜻 → 단어", "단어 → 뜻"], horizontal=True)
+word_options = list(range(len(st.session_state.vocab)))
+selected_indices = st.multiselect(
+    "퀴즈에 넣을 단어를 선택하세요",
+    options=word_options,
+    default=word_options,
+    format_func=lambda i: f"{i + 1}. {st.session_state.vocab[i]['word']} — {st.session_state.vocab[i]['meaning']}",
+    key="quiz-selected-indices",
+)
+selected_vocab = [st.session_state.vocab[i] for i in selected_indices]
+if not selected_vocab:
+    st.info("퀴즈를 시작하려면 단어를 하나 이상 선택해 주세요.")
+    st.stop()
 voice_enabled = bool(get_api_key())
 if not voice_enabled:
-    st.caption("🎙️ 음성 입력과 사진 읽기는 API 키를 등록하면 사용할 수 있어요.")
+    st.caption("🎙️ 음성 입력은 OPENAI_API_KEY, 📷 사진 읽기는 GEMINI_API_KEY를 등록하면 사용할 수 있어요.")
 
 if (st.session_state.quiz is None or st.session_state.quiz["mode"] != mode
-        or st.session_state.quiz["size"] != len(st.session_state.vocab)):
+        or st.session_state.quiz.get("selected_indices") != selected_indices):
     st.markdown("### 준비됐나요?")
-    st.write(f"오늘의 단어 **{len(st.session_state.vocab)}개**를 순서를 섞어 연습해요.")
-    count = st.slider("몇 개 풀까요?", min_value=1, max_value=len(st.session_state.vocab), value=min(10, len(st.session_state.vocab)))
+    st.write(f"선택한 단어 **{len(selected_vocab)}개**를 순서를 섞어 연습해요.")
+    count = st.slider("몇 개 풀까요?", min_value=1, max_value=len(selected_vocab), value=min(10, len(selected_vocab)))
     if st.button("🚀 퀴즈 시작!", type="primary", use_container_width=True):
-        st.session_state.quiz = make_quiz(mode, len(st.session_state.vocab), count)
+        st.session_state.quiz = make_quiz(mode, selected_vocab, selected_indices, count)
         st.rerun()
     st.stop()
 
@@ -198,7 +218,7 @@ if quiz["index"] >= len(quiz["deck"]):
     st.metric("내가 맞혔다고 표시한 개수", f"{quiz['score']} / {len(quiz['deck'])}")
     st.caption("정답은 자동으로 채점하지 않았어요. 문제마다 스스로 판단한 결과예요.")
     if st.button("🔀 다시 섞어서 도전", type="primary", use_container_width=True):
-        st.session_state.quiz = make_quiz(mode, len(st.session_state.vocab), len(quiz["deck"]))
+        st.session_state.quiz = make_quiz(mode, selected_vocab, selected_indices, len(quiz["deck"]))
         st.rerun()
     st.stop()
 
