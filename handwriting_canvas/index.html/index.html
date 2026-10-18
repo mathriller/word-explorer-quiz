@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; font: 15px system-ui, sans-serif; color: #263b60; }
+.wrap { border: 2px solid #dceaff; border-radius: 16px; padding: 10px; background: #fff; }
+canvas { display:block; width:100%; height:190px; border:1px solid #d8e0ec; border-radius:10px; background:#fff; touch-action:none; cursor:crosshair; }
+.bar { display:flex; align-items:center; justify-content:space-between; gap:8px; padding-top:8px; color:#71819a; font-size:13px; }
+button { border:0; border-radius:10px; background:#edf3fc; color:#334969; font-weight:700; padding:8px 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <canvas id="pad" aria-label="여기에 Pencil 또는 손가락으로 답을 쓰세요"></canvas>
+  <div class="bar"><span>✏️ Apple Pencil이나 손가락으로 써 보세요</span><button id="clear" type="button">지우기</button></div>
+</div>
+<script>
+const canvas = document.getElementById('pad');
+const ctx = canvas.getContext('2d');
+let drawing = false;
+let ink = false;
+let dpr = window.devicePixelRatio || 1;
+function resize() {
+  const rect = canvas.getBoundingClientRect();
+  const old = ink ? canvas.toDataURL() : null;
+  dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.max(1, Math.round(rect.width * dpr));
+  canvas.height = Math.max(1, Math.round(rect.height * dpr));
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, rect.width, rect.height);
+  if (old) { const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height); img.src = old; }
+}
+function point(e) { const r = canvas.getBoundingClientRect(); return [e.clientX-r.left, e.clientY-r.top]; }
+canvas.addEventListener('pointerdown', e => { e.preventDefault(); canvas.setPointerCapture(e.pointerId); drawing = true; ink = true; const [x,y]=point(e); ctx.beginPath(); ctx.moveTo(x,y); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#243b64'; ctx.lineWidth=e.pointerType==='pen' ? Math.max(2, 2+e.pressure*4) : 4; ctx.lineTo(x+0.1,y+0.1); ctx.stroke(); });
+canvas.addEventListener('pointermove', e => { if (!drawing) return; e.preventDefault(); const [x,y]=point(e); ctx.lineTo(x,y); ctx.lineWidth=e.pointerType==='pen' ? Math.max(2, 2+e.pressure*4) : 4; ctx.stroke(); });
+function sendValue(value) { window.parent.postMessage({isStreamlitMessage:true, type:'streamlit:setComponentValue', value}, '*'); }
+canvas.addEventListener('pointerup', e => { if (!drawing) return; drawing=false; sendValue(canvas.toDataURL('image/png')); });
+canvas.addEventListener('pointercancel', () => { if (drawing) { drawing=false; sendValue(canvas.toDataURL('image/png')); } });
+document.getElementById('clear').addEventListener('click', () => { ink=false; const r=canvas.getBoundingClientRect(); ctx.clearRect(0,0,r.width,r.height); ctx.fillStyle='#fff'; ctx.fillRect(0,0,r.width,r.height); sendValue(''); });
+window.addEventListener('resize', resize);
+window.addEventListener('message', e => { if (e.data && e.data.type==='streamlit:render' && e.data.args && e.data.args.reset) { ink=false; resize(); } });
+resize();
+window.parent.postMessage({isStreamlitMessage:true, type:'streamlit:componentReady', apiVersion:1}, '*');
+window.parent.postMessage({isStreamlitMessage:true, type:'streamlit:setFrameHeight', height:260}, '*');
+</script>
+</body>
+</html>
