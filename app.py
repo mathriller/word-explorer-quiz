@@ -59,6 +59,8 @@ html, body, [class*="css"] { font-family: 'Nunito','Noto Sans KR',sans-serif; }
 .answer-card { background:#fff; border:2px solid #dceaff; border-radius:18px; padding:14px; min-height:170px; }
 .answer-title { color:#71819a; font-weight:800; margin-bottom:8px; }
 div.stButton > button { border-radius: 14px; font-weight: 800; min-height: 2.8rem; }
+div[data-testid="stCheckbox"] { min-height: 48px; }
+div[data-testid="stCheckbox"] label { min-height: 48px; padding-block: 8px; cursor: pointer; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -166,6 +168,8 @@ with st.sidebar:
                 st.session_state.vocab = extracted
                 st.session_state.pop("vocab_editor", None)
                 st.session_state.pop("quiz-selected-indices", None)
+                for key in [key for key in st.session_state if key.startswith("quiz-word-")]:
+                    del st.session_state[key]
                 st.session_state.quiz = None
                 st.success(f"{len(extracted)}개 단어를 가져왔어요. 표를 확인해 주세요!")
             else:
@@ -188,14 +192,31 @@ if not st.session_state.vocab:
 
 mode = st.radio("어떤 퀴즈를 할까요?", ["뜻 → 단어", "단어 → 뜻"], horizontal=True)
 word_options = list(range(len(st.session_state.vocab)))
+for i in word_options:
+    checkbox_key = f"quiz-word-{i}"
+    if checkbox_key not in st.session_state:
+        st.session_state[checkbox_key] = True
+
 with st.expander("퀴즈에 사용할 단어 선택", expanded=False):
-    selected_indices = st.multiselect(
-        "단어를 고르세요",
-        options=word_options,
-        default=word_options,
-        format_func=lambda i: f"{i + 1}. {st.session_state.vocab[i]['word']} — {st.session_state.vocab[i]['meaning']}",
-        key="quiz-selected-indices",
-    )
+    select_all_col, clear_all_col = st.columns(2)
+    with select_all_col:
+        if st.button("전체 선택", use_container_width=True, key="select-all-quiz-words"):
+            for i in word_options:
+                st.session_state[f"quiz-word-{i}"] = True
+            st.rerun()
+    with clear_all_col:
+        if st.button("전체 해제", use_container_width=True, key="clear-all-quiz-words"):
+            for i in word_options:
+                st.session_state[f"quiz-word-{i}"] = False
+            st.rerun()
+    for i in word_options:
+        vocab_item = st.session_state.vocab[i]
+        st.checkbox(
+            f"{i + 1}. {vocab_item['word']} — {vocab_item['meaning']}",
+            key=f"quiz-word-{i}",
+        )
+
+selected_indices = [i for i in word_options if st.session_state.get(f"quiz-word-{i}", True)]
 st.caption(f"현재 {len(selected_indices)}개 단어 선택됨")
 selected_vocab = [st.session_state.vocab[i] for i in selected_indices]
 if not selected_vocab:
