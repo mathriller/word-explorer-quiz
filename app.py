@@ -61,8 +61,8 @@ html, body, [class*="css"] { font-family: 'Nunito','Noto Sans KR',sans-serif; }
 div.stButton > button { border-radius: 14px; font-weight: 800; min-height: 2.8rem; }
 div[data-testid="stCheckbox"] { min-height: 48px; }
 div[data-testid="stCheckbox"] label { min-height: 48px; padding-block: 8px; cursor: pointer; }
-</style>
-""", unsafe_allow_html=True)
+
+/* Keep the app readable when iPadOS requests dark controls. */:root { color-scheme: light; }html, body, [class*="css"] { color-scheme: light; }.stApp, [data-testid="stAppViewContainer"] { color: #24344d !important; }[data-testid="stMain"], [data-testid="stMainBlockContainer"] { color: #24344d !important; }label, [data-testid="stWidgetLabel"], [data-testid="stWidgetLabel"] p,[data-testid="stMarkdownContainer"] p, [data-testid="stCaptionContainer"],[data-testid="stRadio"] label, [data-testid="stRadio"] label p,[data-testid="stCheckbox"] label, [data-testid="stCheckbox"] label p,[data-testid="stSlider"] label, [data-testid="stFileUploader"] label {  color: #24344d !important;}input, textarea, [data-baseweb="input"] input, [data-baseweb="textarea"] textarea {  color: #24344d !important;  -webkit-text-fill-color: #24344d !important;  background-color: #fff !important;  caret-color: #24344d !important;}input::placeholder, textarea::placeholder {  color: #69778d !important; opacity: 1 !important;  -webkit-text-fill-color: #69778d !important;}[data-testid="stFileUploader"] section {  background: #fff !important; color: #24344d !important;  border-color: #cbd7e8 !important;}[data-testid="stAlert"], [data-testid="stAlert"] p { color: #24344d !important; }.question .eyebrow, .answer-title { color: #52647e !important; }</style>
 
 
 def get_api_key():
