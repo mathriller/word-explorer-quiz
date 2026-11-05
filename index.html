@@ -441,7 +441,7 @@
         <div id="wordSelectionList" style="max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;"></div>
       </details>
 
-      <button class="btn btn-primary btn-block" style="font-size: 1.1rem; padding: 14px;" onclick="startQuiz()">
+      <button class="btn btn-primary btn-block" id="startQuizBtn" style="font-size: 1.1rem; padding: 14px;" onclick="startQuiz()">
         🚀 퀴즈 시작하기!
       </button>
     </div>
@@ -538,8 +538,7 @@
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
       <h3 style="font-size: 1.25rem; color: #1e3a8a;">🧺 단어 바구니</h3>
       <div style="display: flex; gap: 6px;">
-        <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 10px;" onclick="loadDefaultVocab()">기본 단어로 복원</button>
-        <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 10px; color: #ef4444;" onclick="clearAllVocab()">모두 비우기</button>
+        <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px; color: #ef4444;" onclick="clearAllVocab()">🗑️ 단어 바구니 전체 비우기</button>
       </div>
     </div>
     
@@ -610,28 +609,7 @@
 // ==========================================
 // 1. 기본 데이터 & 로컬 스토리지
 // ==========================================
-const DEFAULT_WORDS = [
-  {"word": "usual", "meaning": "흔히 하는"},
-  {"word": "porridge", "meaning": "죽"},
-  {"word": "sardine", "meaning": "정어리"},
-  {"word": "plateful", "meaning": "한 접시 (가득한 양)"},
-  {"word": "cheesy", "meaning": "치즈 맛이 나는"},
-  {"word": "grocer", "meaning": "식료품 잡화점"},
-  {"word": "noticed", "meaning": "신경 쓰다; ~을 의식하다"},
-  {"word": "nearly", "meaning": "거의"},
-  {"word": "looked at", "meaning": "~을 살피다"},
-  {"word": "meant", "meaning": "의미했다 (mean의 과거형)"},
-  {"word": "backwards", "meaning": "뒤로"},
-  {"word": "crate", "meaning": "나무로 된 운송용 상자"},
-  {"word": "reflection", "meaning": "반사"},
-  {"word": "admiring", "meaning": "감탄하는"},
-  {"word": "each other", "meaning": "서로"},
-  {"word": "roll off", "meaning": "굴러 떨어지다"},
-  {"word": "pavement", "meaning": "인도; 포장도로"},
-  {"word": "squashed", "meaning": "짓눌렀다"},
-  {"word": "sticky", "meaning": "끈적끈적한"},
-  {"word": "instead", "meaning": "~을 대신해"}
-];
+const DEFAULT_WORDS = [];
 
 let vocabList = [];
 let quizDeck = [];
@@ -643,14 +621,20 @@ let selectedIndices = new Set();
 function initData() {
   const savedVocab = localStorage.getItem("word_explorer_vocab");
   if (savedVocab) {
-    try { vocabList = JSON.parse(savedVocab); } catch(e) { vocabList = [...DEFAULT_WORDS]; }
+    try {
+      vocabList = JSON.parse(savedVocab);
+      // 이전에 저장되어 있던 예시 기본 단어 20개(usual, porridge 등)가 남아있다면 깨끗하게 초기화
+      if (Array.isArray(vocabList) && vocabList.length > 0 && vocabList[0].word === "usual") {
+        vocabList = [];
+        localStorage.setItem("word_explorer_vocab", JSON.stringify([]));
+      }
+    } catch(e) { vocabList = []; }
   } else {
-    vocabList = [...DEFAULT_WORDS];
+    vocabList = [];
   }
   selectedIndices = new Set(vocabList.map((_, i) => i));
   renderVocabTable();
   updateSliderMax();
-  checkApiKeyStatus();
 }
 
 function saveVocabToStorage() {
@@ -659,16 +643,8 @@ function saveVocabToStorage() {
   updateSliderMax();
 }
 
-function loadDefaultVocab() {
-  if (confirm("기본 단어 20개로 초기화할까요?")) {
-    vocabList = [...DEFAULT_WORDS];
-    selectedIndices = new Set(vocabList.map((_, i) => i));
-    saveVocabToStorage();
-  }
-}
-
 function clearAllVocab() {
-  if (confirm("모든 단어를 비울까요?")) {
+  if (confirm("단어 바구니의 모든 단어를 지울까요?")) {
     vocabList = [];
     selectedIndices = new Set();
     saveVocabToStorage();
@@ -682,6 +658,18 @@ function renderVocabTable() {
   const tbody = document.getElementById("vocabTableBody");
   tbody.innerHTML = "";
   document.getElementById("vocabCount").textContent = vocabList.length;
+
+  if (vocabList.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align:center; padding: 32px 16px; color:#94a3b8; font-weight:700;">
+          단어 바구니가 비어 있어요.<br>위에서 단어장 사진을 찍어 올리거나, '+ 단어 직접 추가'를 눌러보세요! 📸
+        </td>
+      </tr>
+    `;
+    renderSelectionList();
+    return;
+  }
 
   vocabList.forEach((item, index) => {
     const tr = document.createElement("tr");
@@ -718,13 +706,18 @@ function addEmptyRow() {
 function renderSelectionList() {
   const container = document.getElementById("wordSelectionList");
   container.innerHTML = "";
+  if (vocabList.length === 0) {
+    container.innerHTML = `<div style="color:#94a3b8; font-size:13px; padding:8px 0;">등록된 단어가 없습니다.</div>`;
+    document.getElementById("selectedCountText").textContent = "0";
+    return;
+  }
   vocabList.forEach((item, i) => {
     const label = document.createElement("label");
     label.style = "display:flex; align-items:center; gap:8px; font-size:14px; cursor:pointer;";
     const isChecked = selectedIndices.has(i);
     label.innerHTML = `
       <input type="checkbox" ${isChecked ? "checked" : ""} onchange="toggleWordSelection(${i}, this.checked)">
-      <span><strong>${i+1}. ${escapeHtml(item.word)}</strong> — ${escapeHtml(item.meaning)}</span>
+      <span><strong>${i+1}. ${escapeHtml(item.word || '(단어 미입력)')}</strong> — ${escapeHtml(item.meaning || '(뜻 미입력)')}</span>
     `;
     container.appendChild(label);
   });
@@ -748,14 +741,56 @@ function toggleSelectAll(selectAll) {
 function updateSliderMax() {
   const slider = document.getElementById("questionCountSlider");
   const count = selectedIndices.size;
-  slider.max = Math.max(1, count);
-  if (parseInt(slider.value) > count) slider.value = count;
-  updateSliderLabel();
+  const startBtn = document.getElementById("startQuizBtn");
+
+  if (count === 0) {
+    slider.min = 0;
+    slider.max = 0;
+    slider.value = 0;
+    slider.disabled = true;
+    document.getElementById("questionCountLabel").textContent = "0개 (단어 없음)";
+    if (startBtn) {
+      startBtn.disabled = true;
+      startBtn.style.opacity = "0.5";
+      startBtn.style.cursor = "not-allowed";
+      startBtn.textContent = "단어를 먼저 추가/선택해 주세요";
+    }
+  } else {
+    slider.disabled = false;
+    slider.min = 1;
+    slider.max = count; // 정확히 선택된 단어 수로 제한
+    
+    let currentVal = parseInt(slider.value, 10);
+    if (isNaN(currentVal) || currentVal <= 0) {
+      slider.value = Math.min(10, count);
+    } else if (currentVal > count) {
+      slider.value = count; // 선택된 단어 수를 절대 넘지 않음
+    }
+    
+    updateSliderLabel();
+
+    if (startBtn) {
+      startBtn.disabled = false;
+      startBtn.style.opacity = "1";
+      startBtn.style.cursor = "pointer";
+      startBtn.textContent = "🚀 퀴즈 시작하기!";
+    }
+  }
 }
 
 function updateSliderLabel() {
   const slider = document.getElementById("questionCountSlider");
-  document.getElementById("questionCountLabel").textContent = slider.value + "개";
+  const count = selectedIndices.size;
+  if (count === 0) {
+    document.getElementById("questionCountLabel").textContent = "0개";
+    return;
+  }
+  let val = parseInt(slider.value, 10);
+  if (val > count) {
+    val = count;
+    slider.value = count;
+  }
+  document.getElementById("questionCountLabel").textContent = `${val}개 (선택된 ${count}개 중)`;
 }
 
 // ==========================================
