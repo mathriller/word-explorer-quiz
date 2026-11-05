@@ -386,12 +386,12 @@
 <body>
 
 <div class="container">
-  <!-- 상단 네비게이션 & 설정 버튼 -->
+  <!-- 상단 네비게이션 -->
   <div class="top-bar">
-    <div style="font-weight: 800; color: #1e3a8a;">✨ 단어 탐험대 (Web)</div>
-    <button class="badge-btn" onclick="openApiKeyModal()">
-      ⚙️ Gemini API 키 설정 <span id="keyStatusBadge">🔴</span>
-    </button>
+    <div style="font-weight: 800; color: #1e3a8a; font-size: 1.1rem;">✨ 단어 탐험대 🔎</div>
+    <div style="display: flex; align-items: center; gap: 6px; background: #ecfdf5; border: 1.5px solid #a7f3d0; color: #047857; font-size: 13px; font-weight: 700; padding: 6px 12px; border-radius: 999px;">
+      <span>⚡ AI 사진 인식 연결됨</span>
+    </div>
   </div>
 
   <!-- 히어로 배너 -->
@@ -795,53 +795,29 @@ async function compressImage(file, maxDim = 1600) {
   });
 }
 
-async function callGeminiOCR(base64Image, apiKey, model = "gemini-2.5-flash", attempt = 1) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-  const prompt = "Read the printed vocabulary table in this worksheet photo. Return only a JSON array of objects with exactly these keys: \"word\" and \"meaning\". Keep English words and Korean printed meanings. Ignore handwriting, names, dates, page instructions, and row numbers. Do not guess unreadable text. Include a row only when both fields can be read.";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyWmnZyj_EVIQB9U6oSJ2A5VZKHHYJwhzpkCbMMpBwESew54HwoGu8LWdsVNcnFsDi2/exec";
 
-  const payload = {
-    contents: [{
-      parts: [
-        { text: prompt },
-        { inline_data: { mime_type: "image/jpeg", data: base64Image } }
-      ]
-    }],
-    generationConfig: {
-      response_mime_type: "application/json"
-    }
-  };
-
+async function callGeminiOCR(base64Image, attempt = 1) {
   try {
-    const response = await fetch(url, {
+    const response = await fetch(GAS_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ image: base64Image })
     });
 
     if (!response.ok) {
-      const errJson = await response.json().catch(() => ({}));
-      const errMsg = errJson.error?.message || response.statusText;
-      
-      // 503 (Overloaded) 또는 429 (Quota) 발생 시 지수 백오프 자동 재시도
-      if ((response.status === 503 || response.status === 429 || errMsg.includes("overloaded")) && attempt <= 3) {
-        document.getElementById("ocrStatusText").textContent = `서버 혼잡으로 ${attempt}회차 재시도 중… (잠시만 기다려주세요)`;
-        const delay = attempt * 2000 + Math.random() * 1000;
-        await new Promise(r => setTimeout(r, delay));
-        // 모델 폴백 (2.5-flash -> 2.0-flash)
-        const nextModel = attempt === 1 ? "gemini-2.0-flash" : "gemini-2.5-flash";
-        return await callGeminiOCR(base64Image, apiKey, nextModel, attempt + 1);
-      }
-      throw new Error(`Gemini 오류 (${response.status}): ${errMsg}`);
+      throw new Error(`구글 서버 통신 오류 (${response.status})`);
     }
 
     const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) return [];
-    return JSON.parse(text);
+    if (data.error) {
+      throw new Error(data.error);
+    }
+    return Array.isArray(data) ? data : [];
   } catch (err) {
-    if (attempt <= 3) {
+    if (attempt <= 2) {
       await new Promise(r => setTimeout(r, 1500));
-      return await callGeminiOCR(base64Image, apiKey, "gemini-2.0-flash", attempt + 1);
+      return await callGeminiOCR(base64Image, attempt + 1);
     }
     throw err;
   }
@@ -850,14 +826,6 @@ async function callGeminiOCR(base64Image, apiKey, model = "gemini-2.5-flash", at
 async function handleImageUpload(event) {
   const files = Array.from(event.target.files);
   if (!files.length) return;
-
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    alert("사진에서 단어를 읽으려면 상단 ⚙️ 설정에서 Gemini API 키를 먼저 입력해 주세요!");
-    openApiKeyModal();
-    event.target.value = "";
-    return;
-  }
 
   const loadingEl = document.getElementById("ocrLoading");
   const statusEl = document.getElementById("ocrStatusText");
@@ -868,9 +836,9 @@ async function handleImageUpload(event) {
     // 1) 모든 사진을 브라우저에서 병렬로 리사이즈/압축 (0.1~0.3초 소요)
     const compressedImages = await Promise.all(files.map(f => compressImage(f)));
 
-    // 2) Gemini API 병렬 호출
+    // 2) 구글 앱스크립트(Gemini) 병렬 호출 (API 키 필요 없음!)
     const results = await Promise.all(
-      compressedImages.map(imgBase64 => callGeminiOCR(imgBase64, apiKey))
+      compressedImages.map(imgBase64 => callGeminiOCR(imgBase64))
     );
 
     // 3) 결과 병합 및 중복 제거
@@ -1171,6 +1139,7 @@ function getApiKey() {
 
 function checkApiKeyStatus() {
   const badge = document.getElementById("keyStatusBadge");
+  if (!badge) return;
   if (getApiKey()) {
     badge.textContent = "🟢 등록됨";
     badge.style.color = "#16a34a";
