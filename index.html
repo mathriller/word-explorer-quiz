@@ -546,12 +546,23 @@
       단어장 사진을 찍거나 올려서 자동으로 단어를 가져오거나, 표에서 직접 추가/수정할 수 있어요.
     </p>
 
-    <!-- 사진 업로드 및 촬영 -->
-    <div class="upload-box" onclick="document.getElementById('fileInput').click()">
-      <div style="font-size: 2.2rem;">📷</div>
-      <p>단어장 사진 선택 또는 촬영 (여러 장 가능)</p>
-      <span style="font-size: 12px; color: #64748b;">스마트폰/아이패드 카메라로 바로 찍을 수 있어요</span>
-      <input type="file" id="fileInput" accept="image/*" multiple style="display:none;" onchange="handleImageUpload(event)">
+    <!-- 사진 업로드 및 촬영 (아이패드 맞춤 2개 버튼 분리) -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+      <!-- 버튼 1: 카메라 즉시 촬영 (탐색기 안 거치고 카메라 바로 켜짐) -->
+      <div class="upload-box" style="padding: 16px 10px;" onclick="document.getElementById('cameraInput').click()">
+        <div style="font-size: 2.2rem;">📸</div>
+        <p style="font-size: 15px; margin-top: 4px;">카메라로 바로 촬영</p>
+        <span style="font-size: 12px; color: #64748b;">단어장을 바로 찍어요</span>
+        <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;" onchange="handleImageUpload(event)">
+      </div>
+
+      <!-- 버튼 2: 사진 앨범에서 선택 (아이패드 사진 갤러리 열기) -->
+      <div class="upload-box" style="padding: 16px 10px;" onclick="document.getElementById('galleryInput').click()">
+        <div style="font-size: 2.2rem;">🖼️</div>
+        <p style="font-size: 15px; margin-top: 4px;">사진 앨범(갤러리) 선택</p>
+        <span style="font-size: 12px; color: #64748b;">찍어둔 사진을 골라요</span>
+        <input type="file" id="galleryInput" accept="image/jpeg,image/png,image/heic,image/webp,image/*" multiple style="display:none;" onchange="handleImageUpload(event)">
+      </div>
     </div>
 
     <!-- 진행 상황 표시 바 -->
