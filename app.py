@@ -1,13 +1,16 @@
 import base64
+from concurrent.futures import ThreadPoolExecutor
 import html
 import json
 import os
 import random
 import re
+import time
 from io import BytesIO
 from pathlib import Path
 
 import pandas as pd
+from PIL import Image, ImageOps
 import streamlit as st
 from openai import OpenAI
 from google import genai
@@ -95,10 +98,33 @@ def clean_word_rows(rows):
     return cleaned
 
 
-def extract_vocab(image_bytes, mime_type):
+def preprocess_image(image_bytes, max_dim=1600):
+    """스마트폰 고해상도 사진을 리사이즈/압축하고 회전(EXIF)을 자동 보정합니다."""
+    try:
+        img = Image.open(BytesIO(image_bytes))
+        img = ImageOps.exif_transpose(img)
+        if img.mode != "RGB":
+            img = img.convert("RGB")
+        
+        # 긴 변 기준 1600px로 축소 (인식 품질을 유지하면서 토큰 및 전송량 90% 이상 절감)
+        if max(img.size) > max_dim:
+            img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
+            
+        buf = BytesIO()
+        img.save(buf, format="JPEG", quality=82, optimize=True)
+        return buf.getvalue(), "image/jpeg"
+    except Exception:
+        return image_bytes, "image/jpeg"
+
+
+def extract_vocab(image_bytes, mime_type="image/jpeg", max_retries=3):
     key = get_gemini_api_key()
     if not key:
         raise RuntimeError("사진에서 단어를 읽으려면 Streamlit Secrets에 GEMINI_API_KEY를 등록해 주세요. 표에 직접 입력할 수도 있어요.")
+    
+    # 1. 이미지 최적화 (속도 개선 및 서버 과부하 방지)
+    optimized_bytes, target_mime = preprocess_image(image_bytes)
+
     client = genai.Client(api_key=key)
     prompt = (
         "Read the printed vocabulary table in this worksheet photo. Return only a JSON array of objects "
@@ -106,15 +132,39 @@ def extract_vocab(image_bytes, mime_type):
         "Ignore handwriting, names, dates, page instructions, and row numbers. Do not guess unreadable text. "
         "Include a row only when both fields can be read."
     )
-    result = client.models.generate_content(
-        model="gemini-3.8-flash",
-        contents=[
-            prompt,
-            types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
-        ],
-        config=types.GenerateContentConfig(response_mime_type="application/json"),
-    )
-    return clean_word_rows(json.loads(result.text))
+    
+    # 무료 티어 혼잡 시 폴백할 모델 목록
+    candidate_models = ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-2.0-flash"]
+    last_err = None
+
+    for attempt in range(max_retries):
+        model_name = candidate_models[attempt % len(candidate_models)]
+        try:
+            result = client.models.generate_content(
+                model=model_name,
+                contents=[
+                    prompt,
+                    types.Part.from_bytes(data=optimized_bytes, mime_type=target_mime),
+                ],
+                config=types.GenerateContentConfig(response_mime_type="application/json"),
+            )
+            return clean_word_rows(json.loads(result.text))
+        except Exception as exc:
+            last_err = exc
+            err_msg = str(exc).lower()
+            is_overload_or_quota = any(
+                w in err_msg for w in ["overloaded", "503", "429", "quota", "resource_exhausted", "rate limit", "busy"]
+            )
+            if is_overload_or_quota and attempt < max_retries - 1:
+                # 구글 서버 과부하/속도제한 시 지수 백오프 대기 후 재시도
+                sleep_sec = (attempt + 1) * 2.0 + random.uniform(0.5, 1.5)
+                time.sleep(sleep_sec)
+                continue
+            elif attempt < max_retries - 1:
+                time.sleep(1.0)
+                continue
+            else:
+                raise last_err
 
 def transcribe(audio_bytes, mode):
     client = get_client()
@@ -171,14 +221,21 @@ with st.sidebar:
         try:
             extracted = []
             seen_rows = set()
-            with st.spinner(f"사진 {len(photos)}장을 차례로 읽고 있어요…"):
-                for photo in photos:
-                    rows = extract_vocab(photo.getvalue(), photo.type or "image/jpeg")
-                    for row in rows:
-                        signature = (row["word"].casefold(), row["meaning"].casefold())
-                        if signature not in seen_rows:
-                            seen_rows.add(signature)
-                            extracted.append(row)
+            with st.spinner(f"사진 {len(photos)}장을 최적화하여 읽고 있어요 (서버 지연 시 자동 재시도)..."):
+                # 여러 장일 때 병렬 처리하여 대기 시간 단축
+                max_workers = min(len(photos), 3)
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    futures = [
+                        executor.submit(extract_vocab, photo.getvalue(), photo.type or "image/jpeg")
+                        for photo in photos
+                    ]
+                    for f in futures:
+                        rows = f.result()
+                        for row in rows:
+                            signature = (row["word"].casefold(), row["meaning"].casefold())
+                            if signature not in seen_rows:
+                                seen_rows.add(signature)
+                                extracted.append(row)
             if extracted:
                 st.session_state.vocab = extracted
                 st.session_state.pop("vocab_editor", None)
@@ -190,7 +247,11 @@ with st.sidebar:
             else:
                 st.warning("사진에서 읽을 수 있는 단어가 없어요. 사진을 다시 찍거나 표에 직접 입력해 주세요.")
         except Exception as exc:
-            st.error(str(exc))
+            err_text = str(exc)
+            if any(w in err_text.lower() for w in ["overloaded", "503", "resource_exhausted", "quota"]):
+                st.error("⚠️ 구글 Gemini 무료 서버가 일시적으로 매우 혼잡합니다. 잠시 후 다시 시도해 주세요. (Google AI Studio에서 카드를 등록하면 이 현상이 완전히 사라집니다.)")
+            else:
+                st.error(f"오류가 발생했습니다: {exc}")
     st.markdown("#### 단어와 뜻 확인하기")
     edited = st.data_editor(
         pd.DataFrame(st.session_state.vocab), num_rows="dynamic", use_container_width=True,
@@ -307,7 +368,11 @@ else:
         st.markdown("</div>", unsafe_allow_html=True)
     with right:
         st.markdown('<div class="answer-card"><div class="answer-title">정답</div>', unsafe_allow_html=True)
-        st.markdown(f"### {html.escape(expected)}")
+        if ";" in expected or "|" in expected:
+            options = [s.strip() for s in re.split(r"[;|]", expected) if s.strip()]
+            st.markdown(f"### {' / '.join(html.escape(o) for o in options)}")
+        else:
+            st.markdown(f"### {html.escape(expected)}")
         st.markdown("</div>", unsafe_allow_html=True)
     st.write("")
     st.caption("스스로 맞았다고 판단하면 아래 버튼을 누르세요.")

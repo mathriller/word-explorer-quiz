@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>단어 탐험대 🔎</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #2b6cb0;
+      --primary-hover: #2c5282;
+      --primary-light: #ebf8ff;
+      --accent: #3182ce;
+      --bg-gradient: linear-gradient(150deg, #f3fbff 0%, #fffaf0 68%, #f8f4ff 100%);
+      --text: #24344d;
+      --text-muted: #64748b;
+      --border: #dceaff;
+      --card-bg: #ffffff;
+      --radius: 20px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Nunito', 'Noto Sans KR', sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 820px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* 상단 네비게이션 & 헤더 */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 8px;
+    }
+    .badge-btn {
+      background: #fff;
+      border: 1.5px solid var(--border);
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      transition: all 0.2s;
+    }
+    .badge-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+
+    .hero {
+      background: var(--card-bg);
+      border: 2px solid #e7f1ff;
+      border-radius: 24px;
+      padding: 1.4rem 1.6rem;
+      box-shadow: 0 10px 30px rgba(51, 85, 136, 0.08);
+    }
+    .hero h1 {
+      font-size: 1.9rem;
+      font-weight: 900;
+      color: #243b64;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .hero p {
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-size: 0.95rem;
+    }
+
+    /* 카드 공통 */
+    .card {
+      background: var(--card-bg);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: 0 8px 24px rgba(51, 85, 136, 0.06);
+    }
+
+    /* 탭 메뉴 */
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+      background: rgba(220, 234, 255, 0.4);
+      padding: 6px;
+      border-radius: 16px;
+    }
+    .nav-tab {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      background: transparent;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 15px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .nav-tab.active {
+      background: #fff;
+      color: var(--primary);
+      box-shadow: 0 3px 10px rgba(0,0,0,0.06);
+    }
+
+    /* 버튼 스타일 */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-family: inherit;
+      font-weight: 800;
+      font-size: 16px;
+      padding: 12px 20px;
+      border-radius: 14px;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s, background-color 0.2s;
+      text-decoration: none;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary {
+      background: #2563eb;
+      color: #fff;
+    }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-secondary {
+      background: #edf2f7;
+      color: #2d3748;
+    }
+    .btn-secondary:hover { background: #e2e8f0; }
+    .btn-success {
+      background: #10b981;
+      color: #fff;
+    }
+    .btn-success:hover { background: #059669; }
+    .btn-block { width: 100%; }
+
+    /* 업로드 영역 */
+    .upload-box {
+      border: 2px dashed #93c5fd;
+      background: #f0f7ff;
+      border-radius: 16px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .upload-box:hover { background: #e0f2fe; }
+    .upload-box p { color: #1e40af; font-weight: 700; margin-top: 6px; }
+
+    /* 테이블 */
+    .table-container {
+      max-height: 380px;
+      overflow-y: auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      margin-top: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #edf2f7;
+    }
+    th {
+      background: #f8fafc;
+      font-weight: 800;
+      color: #475569;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    td input {
+      width: 100%;
+      border: 1px solid transparent;
+      background: transparent;
+      font-family: inherit;
+      font-size: 14px;
+      padding: 4px;
+      border-radius: 6px;
+      color: var(--text);
+    }
+    td input:focus {
+      background: #fff;
+      border-color: #93c5fd;
+      outline: none;
+    }
+    .delete-btn {
+      color: #ef4444;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 16px;
+      padding: 4px 8px;
+    }
+
+    /* 퀴즈 뷰 */
+    .question-box {
+      background: #fff;
+      border: 2px solid #dceaff;
+      border-radius: 24px;
+      padding: 2.2rem 1.5rem;
+      text-align: center;
+      box-shadow: 0 14px 36px rgba(51, 85, 136, 0.08);
+    }
+    .question-box .eyebrow {
+      color: #64748b;
+      font-weight: 800;
+      font-size: 1rem;
+      letter-spacing: .03em;
+    }
+    .question-box .prompt {
+      color: #1e3a8a;
+      font-size: 2.6rem;
+      font-weight: 900;
+      margin: 0.8rem 0;
+      line-height: 1.2;
+      word-break: break-word;
+    }
+
+    /* 손글씨 캔버스 */
+    .canvas-wrap {
+      border: 2px solid #cbd5e1;
+      border-radius: 16px;
+      padding: 8px;
+      background: #fff;
+      margin-top: 10px;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 200px;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      background: #ffffff;
+      touch-action: none;
+      cursor: crosshair;
+    }
+    .canvas-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 4px 4px;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    /* 입력 박스 */
+    .input-text {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #cbd5e1;
+      border-radius: 12px;
+      font-size: 16px;
+      font-family: inherit;
+      color: var(--text);
+      outline: none;
+      margin-top: 8px;
+    }
+    .input-text:focus { border-color: #2563eb; }
+
+    /* 비교 카드 */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 14px 0;
+    }
+    @media (max-width: 580px) {
+      .compare-grid { grid-template-columns: 1fr; }
+    }
+    .answer-card {
+      background: #fff;
+      border: 2px solid #dceaff;
+      border-radius: 18px;
+      padding: 14px;
+      min-height: 160px;
+      display: flex;
+      flex-direction: column;
+    }
+    .answer-title {
+      color: #64748b;
+      font-weight: 800;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    .answer-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    .answer-body img {
+      max-width: 100%;
+      max-height: 140px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+    .answer-body .text {
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: #1e3a8a;
+    }
+
+    /* 프로그레스 바 */
+    .progress-bar-wrap {
+      width: 100%;
+      height: 10px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .progress-bar {
+      height: 100%;
+      background: #3b82f6;
+      border-radius: 999px;
+      transition: width 0.3s;
+    }
+
+    /* 설정 모달 */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 16px;
+    }
+    .modal {
+      background: #fff;
+      border-radius: 20px;
+      max-width: 480px;
+      width: 100%;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+    .hidden { display: none !important; }
+
+    /* 로딩 스피너 */
+    .spinner {
+      border: 3px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      width: 18px;
+      height: 18px;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- 상단 네비게이션 & 설정 버튼 -->
+  <div class="top-bar">
+    <div style="font-weight: 800; color: #1e3a8a;">✨ 단어 탐험대 (Web)</div>
+    <button class="badge-btn" onclick="openApiKeyModal()">
+      ⚙️ Gemini API 키 설정 <span id="keyStatusBadge">🔴</span>
+    </button>
+  </div>
+
+  <!-- 히어로 배너 -->
+  <div class="hero">
+    <h1>🔎 단어 탐험대</h1>
+    <p>단어장 사진을 올리거나 찍으면 단어를 쏙쏙 꺼내어 재미있게 퀴즈로 풀어요!</p>
+  </div>
+
+  <!-- 탭 메뉴 -->
+  <div class="nav-tabs">
+    <button class="nav-tab active" id="tabQuizBtn" onclick="switchTab('quiz')">🎯 퀴즈 풀기</button>
+    <button class="nav-tab" id="tabVocabBtn" onclick="switchTab('vocab')">🧺 단어 바구니 (<span id="vocabCount">0</span>)</button>
+  </div>
+
+  <!-- ======================= TAB 1: 퀴즈 화면 ======================= -->
+  <div id="tabQuiz">
+    <!-- 퀴즈 시작 전 준비 화면 -->
+    <div id="quizSetupView" class="card">
+      <h3 style="font-size: 1.25rem; margin-bottom: 12px; color: #1e3a8a;">어떤 퀴즈를 풀어볼까요?</h3>
+      
+      <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+        <label style="flex:1; border: 2px solid #cbd5e1; padding: 12px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 700;">
+          <input type="radio" name="quizMode" value="meaning_to_word" checked>
+          뜻 보고 단어 맞히기 (뜻 → 단어)
+        </label>
+        <label style="flex:1; border: 2px solid #cbd5e1; padding: 12px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 700;">
+          <input type="radio" name="quizMode" value="word_to_meaning">
+          단어 보고 뜻 맞히기 (단어 → 뜻)
+        </label>
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 6px;">
+          <span>풀어볼 문제 수</span>
+          <span id="questionCountLabel" style="color: #2563eb;">10개</span>
+        </div>
+        <input type="range" id="questionCountSlider" min="1" max="20" value="10" style="width: 100%; accent-color: #2563eb;" oninput="updateSliderLabel()">
+      </div>
+
+      <!-- 단어 선택 토글 박스 -->
+      <details style="margin-bottom: 18px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px;">
+        <summary style="font-weight: 800; cursor: pointer; color: #475569;">출제할 단어 선택하기 (<span id="selectedCountText">0</span>개 선택됨)</summary>
+        <div style="display: flex; gap: 8px; margin: 10px 0;">
+          <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px;" onclick="toggleSelectAll(true)">전체 선택</button>
+          <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px;" onclick="toggleSelectAll(false)">전체 해제</button>
+        </div>
+        <div id="wordSelectionList" style="max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;"></div>
+      </details>
+
+      <button class="btn btn-primary btn-block" style="font-size: 1.1rem; padding: 14px;" onclick="startQuiz()">
+        🚀 퀴즈 시작하기!
+      </button>
+    </div>
+
+    <!-- 퀴즈 문제 진행 화면 -->
+    <div id="quizPlayView" class="hidden" style="display: flex; flex-direction: column; gap: 14px;">
+      <div>
+        <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 14px; margin-bottom: 4px; color: #64748b;">
+          <span id="progressText">문제 1 / 10</span>
+          <span id="scoreText">현재 점수: 0점</span>
+        </div>
+        <div class="progress-bar-wrap">
+          <div id="progressBar" class="progress-bar" style="width: 10%;"></div>
+        </div>
+      </div>
+
+      <div class="question-box">
+        <div class="eyebrow" id="quizEyebrow">뜻을 보고 영어 단어를 써 보세요</div>
+        <div class="prompt" id="quizPrompt">usual</div>
+      </div>
+
+      <!-- 답변 입력 화면 (제출 전) -->
+      <div id="quizInputSection" class="card">
+        <h4 style="font-size: 15px; color: #334155; margin-bottom: 6px;">✏️ Apple Pencil이나 손가락으로 써 보세요</h4>
+        <div class="canvas-wrap">
+          <canvas id="paintCanvas"></canvas>
+          <div class="canvas-bar">
+            <span>필압 지원 (Pencil)</span>
+            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;" onclick="clearCanvas()">지우기</button>
+          </div>
+        </div>
+
+        <input type="text" id="quizTextInput" class="input-text" placeholder="키보드로 답하려면 여기에 입력하세요">
+
+        <div style="margin-top: 10px; display: flex; gap: 8px;">
+          <button class="btn btn-secondary" id="voiceBtn" onclick="toggleVoiceInput()" style="flex: 1;">
+            🎙️ 음성으로 답하기
+          </button>
+        </div>
+
+        <button class="btn btn-primary btn-block" style="margin-top: 14px; padding: 14px;" onclick="submitAnswer()">
+          답과 정답 비교하기
+        </button>
+      </div>
+
+      <!-- 답변 비교 화면 (제출 후) -->
+      <div id="quizResultSection" class="card hidden">
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; border-radius: 12px; padding: 10px; font-size: 14px; font-weight: 700; text-align: center;">
+          직접 살펴보고 판단해 보세요! 스스로 맞았다고 생각하면 '내가 맞혔어요'를 눌러주세요.
+        </div>
+
+        <div class="compare-grid">
+          <div class="answer-card">
+            <div class="answer-title">내 답</div>
+            <div class="answer-body" id="myAnswerBody"></div>
+          </div>
+          <div class="answer-card">
+            <div class="answer-title">정답</div>
+            <div class="answer-body">
+              <div class="text" id="correctAnswerText">usual</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-success" style="flex: 1; padding: 14px;" onclick="judgeAnswer(true)">
+            ✅ 내가 맞혔어요 (+1점)
+          </button>
+          <button class="btn btn-secondary" style="flex: 1; padding: 14px;" onclick="judgeAnswer(false)">
+            다음 문제로 넘어가기
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 퀴즈 완료 화면 -->
+    <div id="quizFinishedView" class="card hidden" style="text-align: center; padding: 2.5rem 1.5rem;">
+      <h2 style="font-size: 2rem; color: #1e3a8a; margin-bottom: 8px;">🎉 퀴즈 끝!</h2>
+      <p style="color: #64748b; font-size: 1.1rem; margin-bottom: 20px;">모든 문제를 다 풀었어요!</p>
+      
+      <div style="background: #f0fdf4; border: 2px solid #bbf7d0; border-radius: 20px; padding: 20px; max-width: 300px; margin: 0 auto 24px;">
+        <div style="font-size: 14px; font-weight: 800; color: #166534;">내가 맞힌 개수</div>
+        <div id="finalScoreDisplay" style="font-size: 3rem; font-weight: 900; color: #15803d; margin: 6px 0;">8 / 10</div>
+      </div>
+
+      <button class="btn btn-primary" style="padding: 14px 28px; font-size: 1.1rem;" onclick="resetToQuizSetup()">
+        🔀 다시 섞어서 도전하기
+      </button>
+    </div>
+  </div>
+
+  <!-- ======================= TAB 2: 단어 바구니 (OCR 및 목록 편집) ======================= -->
+  <div id="tabVocab" class="card hidden">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h3 style="font-size: 1.25rem; color: #1e3a8a;">🧺 단어 바구니</h3>
+      <div style="display: flex; gap: 6px;">
+        <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 10px;" onclick="loadDefaultVocab()">기본 단어로 복원</button>
+        <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 10px; color: #ef4444;" onclick="clearAllVocab()">모두 비우기</button>
+      </div>
+    </div>
+    
+    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 14px;">
+      단어장 사진을 찍거나 올려서 자동으로 단어를 가져오거나, 표에서 직접 추가/수정할 수 있어요.
+    </p>
+
+    <!-- 사진 업로드 및 촬영 -->
+    <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+      <div style="font-size: 2.2rem;">📷</div>
+      <p>단어장 사진 선택 또는 촬영 (여러 장 가능)</p>
+      <span style="font-size: 12px; color: #64748b;">스마트폰/아이패드 카메라로 바로 찍을 수 있어요</span>
+      <input type="file" id="fileInput" accept="image/*" multiple style="display:none;" onchange="handleImageUpload(event)">
+    </div>
+
+    <!-- 진행 상황 표시 바 -->
+    <div id="ocrLoading" class="hidden" style="margin-top: 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 12px; text-align: center; color: #1e40af; font-weight: 700; font-size: 14px;">
+      <div class="spinner" style="border-top-color: #2563eb; margin-right: 6px; vertical-align: middle;"></div>
+      <span id="ocrStatusText">사진을 초고속으로 압축하고 단어를 읽고 있어요…</span>
+    </div>
+
+    <!-- 단어 표 -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+      <h4 style="font-size: 15px; color: #334155;">단어 목록</h4>
+      <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px;" onclick="addEmptyRow()">+ 단어 직접 추가</button>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 50px;">번호</th>
+            <th style="width: 40%;">Word (영어)</th>
+            <th>Meaning (한국어 뜻)</th>
+            <th style="width: 50px;">삭제</th>
+          </tr>
+        </thead>
+        <tbody id="vocabTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= 설정 모달 (Gemini API 키) ======================= -->
+<div id="apiKeyModal" class="modal-backdrop hidden">
+  <div class="modal">
+    <h3 style="font-size: 1.3rem; color: #1e3a8a; margin-bottom: 10px;">⚙️ Gemini API 키 설정</h3>
+    <p style="color: #64748b; font-size: 14px; margin-bottom: 16px; line-height: 1.5;">
+      사진에서 단어를 자동으로 인식하려면 Google Gemini API 키가 필요합니다.<br>
+      키는 내 브라우저에만 안전하게 저장되며 외부로 전송되지 않습니다.
+    </p>
+
+    <label style="font-weight: 700; font-size: 13px; color: #475569;">Gemini API Key</label>
+    <input type="password" id="apiKeyInput" class="input-text" placeholder="AIzaSy..." style="margin-top: 4px; margin-bottom: 12px;">
+
+    <div style="font-size: 13px; color: #2563eb; margin-bottom: 18px;">
+      👉 <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #2563eb; font-weight: 700;">Google AI Studio에서 무료로 키 발급받기</a>
+    </div>
+
+    <div style="display: flex; gap: 8px;">
+      <button class="btn btn-primary" style="flex: 1;" onclick="saveApiKey()">저장하기</button>
+      <button class="btn btn-secondary" style="flex: 1;" onclick="closeApiKeyModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==========================================
+// 1. 기본 데이터 & 로컬 스토리지
+// ==========================================
+const DEFAULT_WORDS = [
+  {"word": "usual", "meaning": "흔히 하는"},
+  {"word": "porridge", "meaning": "죽"},
+  {"word": "sardine", "meaning": "정어리"},
+  {"word": "plateful", "meaning": "한 접시 (가득한 양)"},
+  {"word": "cheesy", "meaning": "치즈 맛이 나는"},
+  {"word": "grocer", "meaning": "식료품 잡화점"},
+  {"word": "noticed", "meaning": "신경 쓰다; ~을 의식하다"},
+  {"word": "nearly", "meaning": "거의"},
+  {"word": "looked at", "meaning": "~을 살피다"},
+  {"word": "meant", "meaning": "의미했다 (mean의 과거형)"},
+  {"word": "backwards", "meaning": "뒤로"},
+  {"word": "crate", "meaning": "나무로 된 운송용 상자"},
+  {"word": "reflection", "meaning": "반사"},
+  {"word": "admiring", "meaning": "감탄하는"},
+  {"word": "each other", "meaning": "서로"},
+  {"word": "roll off", "meaning": "굴러 떨어지다"},
+  {"word": "pavement", "meaning": "인도; 포장도로"},
+  {"word": "squashed", "meaning": "짓눌렀다"},
+  {"word": "sticky", "meaning": "끈적끈적한"},
+  {"word": "instead", "meaning": "~을 대신해"}
+];
+
+let vocabList = [];
+let quizDeck = [];
+let quizIndex = 0;
+let quizScore = 0;
+let currentMode = "meaning_to_word";
+let selectedIndices = new Set();
+
+function initData() {
+  const savedVocab = localStorage.getItem("word_explorer_vocab");
+  if (savedVocab) {
+    try { vocabList = JSON.parse(savedVocab); } catch(e) { vocabList = [...DEFAULT_WORDS]; }
+  } else {
+    vocabList = [...DEFAULT_WORDS];
+  }
+  selectedIndices = new Set(vocabList.map((_, i) => i));
+  renderVocabTable();
+  updateSliderMax();
+  checkApiKeyStatus();
+}
+
+function saveVocabToStorage() {
+  localStorage.setItem("word_explorer_vocab", JSON.stringify(vocabList));
+  renderVocabTable();
+  updateSliderMax();
+}
+
+function loadDefaultVocab() {
+  if (confirm("기본 단어 20개로 초기화할까요?")) {
+    vocabList = [...DEFAULT_WORDS];
+    selectedIndices = new Set(vocabList.map((_, i) => i));
+    saveVocabToStorage();
+  }
+}
+
+function clearAllVocab() {
+  if (confirm("모든 단어를 비울까요?")) {
+    vocabList = [];
+    selectedIndices = new Set();
+    saveVocabToStorage();
+  }
+}
+
+// ==========================================
+// 2. 단어 테이블 렌더링 & 편집
+// ==========================================
+function renderVocabTable() {
+  const tbody = document.getElementById("vocabTableBody");
+  tbody.innerHTML = "";
+  document.getElementById("vocabCount").textContent = vocabList.length;
+
+  vocabList.forEach((item, index) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td style="color:#64748b; font-weight:700;">${index + 1}</td>
+      <td><input type="text" value="${escapeHtml(item.word)}" onchange="updateVocabItem(${index}, 'word', this.value)"></td>
+      <td><input type="text" value="${escapeHtml(item.meaning)}" onchange="updateVocabItem(${index}, 'meaning', this.value)"></td>
+      <td><button class="delete-btn" onclick="deleteVocabItem(${index})">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  renderSelectionList();
+}
+
+function updateVocabItem(index, key, value) {
+  vocabList[index][key] = value.trim();
+  localStorage.setItem("word_explorer_vocab", JSON.stringify(vocabList));
+}
+
+function deleteVocabItem(index) {
+  vocabList.splice(index, 1);
+  selectedIndices.delete(index);
+  saveVocabToStorage();
+}
+
+function addEmptyRow() {
+  vocabList.push({ word: "", meaning: "" });
+  saveVocabToStorage();
+  const inputs = document.querySelectorAll("#vocabTableBody input");
+  if (inputs.length > 0) inputs[inputs.length - 2].focus();
+}
+
+function renderSelectionList() {
+  const container = document.getElementById("wordSelectionList");
+  container.innerHTML = "";
+  vocabList.forEach((item, i) => {
+    const label = document.createElement("label");
+    label.style = "display:flex; align-items:center; gap:8px; font-size:14px; cursor:pointer;";
+    const isChecked = selectedIndices.has(i);
+    label.innerHTML = `
+      <input type="checkbox" ${isChecked ? "checked" : ""} onchange="toggleWordSelection(${i}, this.checked)">
+      <span><strong>${i+1}. ${escapeHtml(item.word)}</strong> — ${escapeHtml(item.meaning)}</span>
+    `;
+    container.appendChild(label);
+  });
+  document.getElementById("selectedCountText").textContent = selectedIndices.size;
+}
+
+function toggleWordSelection(index, checked) {
+  if (checked) selectedIndices.add(index);
+  else selectedIndices.delete(index);
+  document.getElementById("selectedCountText").textContent = selectedIndices.size;
+  updateSliderMax();
+}
+
+function toggleSelectAll(selectAll) {
+  if (selectAll) selectedIndices = new Set(vocabList.map((_, i) => i));
+  else selectedIndices.clear();
+  renderSelectionList();
+  updateSliderMax();
+}
+
+function updateSliderMax() {
+  const slider = document.getElementById("questionCountSlider");
+  const count = selectedIndices.size;
+  slider.max = Math.max(1, count);
+  if (parseInt(slider.value) > count) slider.value = count;
+  updateSliderLabel();
+}
+
+function updateSliderLabel() {
+  const slider = document.getElementById("questionCountSlider");
+  document.getElementById("questionCountLabel").textContent = slider.value + "개";
+}
+
+// ==========================================
+// 3. 브라우저 초고속 이미지 리사이즈 & Gemini OCR
+// ==========================================
+async function compressImage(file, maxDim = 1600) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        // JPEG 82% 압축
+        const base64Data = canvas.toDataURL("image/jpeg", 0.82);
+        resolve(base64Data.split(",")[1]); // 순수 base64 반환
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function callGeminiOCR(base64Image, apiKey, model = "gemini-2.5-flash", attempt = 1) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const prompt = "Read the printed vocabulary table in this worksheet photo. Return only a JSON array of objects with exactly these keys: \"word\" and \"meaning\". Keep English words and Korean printed meanings. Ignore handwriting, names, dates, page instructions, and row numbers. Do not guess unreadable text. Include a row only when both fields can be read.";
+
+  const payload = {
+    contents: [{
+      parts: [
+        { text: prompt },
+        { inline_data: { mime_type: "image/jpeg", data: base64Image } }
+      ]
+    }],
+    generationConfig: {
+      response_mime_type: "application/json"
+    }
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errJson = await response.json().catch(() => ({}));
+      const errMsg = errJson.error?.message || response.statusText;
+      
+      // 503 (Overloaded) 또는 429 (Quota) 발생 시 지수 백오프 자동 재시도
+      if ((response.status === 503 || response.status === 429 || errMsg.includes("overloaded")) && attempt <= 3) {
+        document.getElementById("ocrStatusText").textContent = `서버 혼잡으로 ${attempt}회차 재시도 중… (잠시만 기다려주세요)`;
+        const delay = attempt * 2000 + Math.random() * 1000;
+        await new Promise(r => setTimeout(r, delay));
+        // 모델 폴백 (2.5-flash -> 2.0-flash)
+        const nextModel = attempt === 1 ? "gemini-2.0-flash" : "gemini-2.5-flash";
+        return await callGeminiOCR(base64Image, apiKey, nextModel, attempt + 1);
+      }
+      throw new Error(`Gemini 오류 (${response.status}): ${errMsg}`);
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) return [];
+    return JSON.parse(text);
+  } catch (err) {
+    if (attempt <= 3) {
+      await new Promise(r => setTimeout(r, 1500));
+      return await callGeminiOCR(base64Image, apiKey, "gemini-2.0-flash", attempt + 1);
+    }
+    throw err;
+  }
+}
+
+async function handleImageUpload(event) {
+  const files = Array.from(event.target.files);
+  if (!files.length) return;
+
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    alert("사진에서 단어를 읽으려면 상단 ⚙️ 설정에서 Gemini API 키를 먼저 입력해 주세요!");
+    openApiKeyModal();
+    event.target.value = "";
+    return;
+  }
+
+  const loadingEl = document.getElementById("ocrLoading");
+  const statusEl = document.getElementById("ocrStatusText");
+  loadingEl.classList.remove("hidden");
+  statusEl.textContent = `사진 ${files.length}장을 초고속 최적화하고 단어를 분석하고 있어요…`;
+
+  try {
+    // 1) 모든 사진을 브라우저에서 병렬로 리사이즈/압축 (0.1~0.3초 소요)
+    const compressedImages = await Promise.all(files.map(f => compressImage(f)));
+
+    // 2) Gemini API 병렬 호출
+    const results = await Promise.all(
+      compressedImages.map(imgBase64 => callGeminiOCR(imgBase64, apiKey))
+    );
+
+    // 3) 결과 병합 및 중복 제거
+    let addedCount = 0;
+    const seenSignatures = new Set(vocabList.map(v => `${v.word.toLowerCase()}_${v.meaning.toLowerCase()}`));
+
+    results.flat().forEach(item => {
+      const w = String(item.word || "").trim();
+      const m = String(item.meaning || "").trim();
+      if (w && m) {
+        const sig = `${w.toLowerCase()}_${m.toLowerCase()}`;
+        if (!seenSignatures.has(sig)) {
+          seenSignatures.add(sig);
+          vocabList.push({ word: w, meaning: m });
+          addedCount++;
+        }
+      }
+    });
+
+    selectedIndices = new Set(vocabList.map((_, i) => i));
+    saveVocabToStorage();
+    alert(`성공! 사진에서 단어 ${addedCount}개를 추출하여 바구니에 담았어요.`);
+  } catch (err) {
+    console.error(err);
+    alert("단어 추출 실패: " + err.message + "\n(구글 서버가 바쁠 수 있으니 잠시 후 다시 시도해 주세요)");
+  } finally {
+    loadingEl.classList.add("hidden");
+    event.target.value = "";
+  }
+}
+
+// ==========================================
+// 4. 퀴즈 엔진
+// ==========================================
+function startQuiz() {
+  const selected = Array.from(selectedIndices).map(i => vocabList[i]).filter(Boolean);
+  if (selected.length === 0) {
+    alert("퀴즈에 포함할 단어를 1개 이상 선택해 주세요!");
+    return;
+  }
+
+  const radios = document.getElementsByName("quizMode");
+  for (const r of radios) {
+    if (r.checked) currentMode = r.value;
+  }
+
+  const count = parseInt(document.getElementById("questionCountSlider").value, 10);
+  
+  // 무작위 셔플 후 선택한 문제 수만큼 추출
+  const shuffled = [...selected].sort(() => 0.5 - Math.random());
+  quizDeck = shuffled.slice(0, count);
+  quizIndex = 0;
+  quizScore = 0;
+
+  document.getElementById("quizSetupView").classList.add("hidden");
+  document.getElementById("quizFinishedView").classList.add("hidden");
+  document.getElementById("quizPlayView").classList.remove("hidden");
+
+  loadQuestion();
+}
+
+function loadQuestion() {
+  const currentItem = quizDeck[quizIndex];
+  const isMeaningToWord = currentMode === "meaning_to_word";
+
+  document.getElementById("progressText").textContent = `문제 ${quizIndex + 1} / ${quizDeck.length}`;
+  document.getElementById("scoreText").textContent = `현재 점수: ${quizScore}점`;
+  document.getElementById("progressBar").style.width = `${((quizIndex) / quizDeck.length) * 100}%`;
+
+  document.getElementById("quizEyebrow").textContent = isMeaningToWord
+    ? "뜻을 보고 영어 단어를 써 보세요"
+    : "영어 단어의 뜻을 써 보세요";
+
+  document.getElementById("quizPrompt").textContent = isMeaningToWord
+    ? currentItem.meaning
+    : currentItem.word;
+
+  // 캔버스 및 인풋 리셋
+  clearCanvas();
+  document.getElementById("quizTextInput").value = "";
+
+  document.getElementById("quizInputSection").classList.remove("hidden");
+  document.getElementById("quizResultSection").classList.add("hidden");
+}
+
+let lastDrawingData = "";
+let lastAnswerText = "";
+
+function submitAnswer() {
+  lastDrawingData = hasInk ? canvas.toDataURL("image/png") : "";
+  lastAnswerText = document.getElementById("quizTextInput").value.trim();
+
+  if (!lastDrawingData && !lastAnswerText) {
+    alert("손글씨나 키보드로 답을 먼저 입력해 주세요!");
+    return;
+  }
+
+  const currentItem = quizDeck[quizIndex];
+  const isMeaningToWord = currentMode === "meaning_to_word";
+  const expected = isMeaningToWord ? currentItem.word : currentItem.meaning;
+
+  // 내 답 표시
+  const myBody = document.getElementById("myAnswerBody");
+  myBody.innerHTML = "";
+  if (lastDrawingData) {
+    const img = document.createElement("img");
+    img.src = lastDrawingData;
+    myBody.appendChild(img);
+  }
+  if (lastAnswerText) {
+    const p = document.createElement("div");
+    p.className = "text";
+    p.textContent = lastAnswerText;
+    p.style.marginTop = "8px";
+    myBody.appendChild(p);
+  }
+
+  // 정답 표시 (여러 정답 분리 지원)
+  const answerEl = document.getElementById("correctAnswerText");
+  if (expected.includes(";") || expected.includes("|")) {
+    const opts = expected.split(/[;|]/).map(s => s.trim()).filter(Boolean);
+    answerEl.textContent = opts.join("  /  ");
+  } else {
+    answerEl.textContent = expected;
+  }
+
+  document.getElementById("quizInputSection").classList.add("hidden");
+  document.getElementById("quizResultSection").classList.remove("hidden");
+}
+
+function judgeAnswer(gotItRight) {
+  if (gotItRight) quizScore++;
+  quizIndex++;
+
+  if (quizIndex >= quizDeck.length) {
+    // 퀴즈 종료
+    document.getElementById("quizPlayView").classList.add("hidden");
+    document.getElementById("quizFinishedView").classList.remove("hidden");
+    document.getElementById("finalScoreDisplay").textContent = `${quizScore} / ${quizDeck.length}`;
+  } else {
+    loadQuestion();
+  }
+}
+
+function resetToQuizSetup() {
+  document.getElementById("quizFinishedView").classList.add("hidden");
+  document.getElementById("quizSetupView").classList.remove("hidden");
+}
+
+// ==========================================
+// 5. 손글씨 캔버스 (Apple Pencil 압력 감지 지원)
+// ==========================================
+const canvas = document.getElementById("paintCanvas");
+const ctx = canvas.getContext("2d");
+let isDrawing = false;
+let hasInk = false;
+
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const oldImg = hasInk ? canvas.toDataURL() : null;
+  canvas.width = Math.max(1, Math.round(rect.width * dpr));
+  canvas.height = Math.max(1, Math.round(rect.height * dpr));
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, rect.width, rect.height);
+  if (oldImg) {
+    const img = new Image();
+    img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height);
+    img.src = oldImg;
+  }
+}
+
+function getPoint(e) {
+  const rect = canvas.getBoundingClientRect();
+  return [e.clientX - rect.left, e.clientY - rect.top];
+}
+
+canvas.addEventListener("pointerdown", e => {
+  e.preventDefault();
+  canvas.setPointerCapture(e.pointerId);
+  isDrawing = true;
+  hasInk = true;
+  const [x, y] = getPoint(e);
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "#1e3a8a";
+  ctx.lineWidth = e.pointerType === "pen" ? Math.max(2.5, 2 + e.pressure * 5) : 4;
+  ctx.lineTo(x + 0.1, y + 0.1);
+  ctx.stroke();
+});
+
+canvas.addEventListener("pointermove", e => {
+  if (!isDrawing) return;
+  e.preventDefault();
+  const [x, y] = getPoint(e);
+  ctx.lineWidth = e.pointerType === "pen" ? Math.max(2.5, 2 + e.pressure * 5) : 4;
+  ctx.lineTo(x, y);
+  ctx.stroke();
+});
+
+canvas.addEventListener("pointerup", () => { isDrawing = false; });
+canvas.addEventListener("pointercancel", () => { isDrawing = false; });
+
+function clearCanvas() {
+  hasInk = false;
+  const rect = canvas.getBoundingClientRect();
+  ctx.clearRect(0, 0, rect.width, rect.height);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, rect.width, rect.height);
+}
+
+window.addEventListener("resize", resizeCanvas);
+
+// ==========================================
+// 6. 브라우저 내장 음성인식 (Web Speech API)
+// ==========================================
+let recognition = null;
+function toggleVoiceInput() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("사용 중인 브라우저가 음성 입력을 지원하지 않아요 (Chrome 또는 Safari 권장).");
+    return;
+  }
+
+  if (recognition) {
+    recognition.stop();
+    recognition = null;
+    document.getElementById("voiceBtn").textContent = "🎙️ 음성으로 답하기";
+    return;
+  }
+
+  recognition = new SpeechRecognition();
+  recognition.lang = currentMode === "meaning_to_word" ? "en-US" : "ko-KR";
+  recognition.interimResults = false;
+
+  recognition.onstart = () => {
+    document.getElementById("voiceBtn").textContent = "🔴 듣고 있어요… (말씀해 주세요)";
+  };
+
+  recognition.onresult = (event) => {
+    const text = event.results[0][0].transcript;
+    document.getElementById("quizTextInput").value = text;
+  };
+
+  recognition.onerror = (event) => {
+    console.error("음성인식 오류:", event.error);
+    alert("음성을 인식하지 못했어요: " + event.error);
+  };
+
+  recognition.onend = () => {
+    recognition = null;
+    document.getElementById("voiceBtn").textContent = "🎙️ 음성으로 답하기";
+  };
+
+  recognition.start();
+}
+
+// ==========================================
+// 7. 탭 및 모달 관리
+// ==========================================
+function switchTab(tab) {
+  if (tab === "quiz") {
+    document.getElementById("tabQuiz").classList.remove("hidden");
+    document.getElementById("tabVocab").classList.add("hidden");
+    document.getElementById("tabQuizBtn").classList.add("active");
+    document.getElementById("tabVocabBtn").classList.remove("active");
+    setTimeout(resizeCanvas, 50);
+  } else {
+    document.getElementById("tabQuiz").classList.add("hidden");
+    document.getElementById("tabVocab").classList.remove("hidden");
+    document.getElementById("tabQuizBtn").classList.remove("active");
+    document.getElementById("tabVocabBtn").classList.add("active");
+  }
+}
+
+function openApiKeyModal() {
+  document.getElementById("apiKeyInput").value = getApiKey();
+  document.getElementById("apiKeyModal").classList.remove("hidden");
+}
+
+function closeApiKeyModal() {
+  document.getElementById("apiKeyModal").classList.add("hidden");
+}
+
+function saveApiKey() {
+  const key = document.getElementById("apiKeyInput").value.trim();
+  localStorage.setItem("gemini_api_key", key);
+  checkApiKeyStatus();
+  closeApiKeyModal();
+}
+
+function getApiKey() {
+  return localStorage.getItem("gemini_api_key") || "";
+}
+
+function checkApiKeyStatus() {
+  const badge = document.getElementById("keyStatusBadge");
+  if (getApiKey()) {
+    badge.textContent = "🟢 등록됨";
+    badge.style.color = "#16a34a";
+  } else {
+    badge.textContent = "🔴 미등록";
+    badge.style.color = "#ef4444";
+  }
+}
+
+function escapeHtml(str) {
+  return String(str || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// 초기화
+window.addEventListener("DOMContentLoaded", () => {
+  initData();
+  resizeCanvas();
+});
+</script>
+</body>
+</html>
